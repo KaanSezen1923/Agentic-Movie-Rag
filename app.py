@@ -51,6 +51,33 @@ def delete_chat_from_firestore(username, chat_id):
     except Exception as e:
         st.error(f"Sohbet silinirken hata: {e}")
         return False
+    
+    
+def get_trailer(movie_title):
+    try:
+        response = requests.get(f"https://agentic-movie-recommendation-system-api-2.onrender.com/get_trailer/{movie_title}")
+        if response.status_code == 200:
+            data = response.json()
+            return data.get("trailer_url", "")
+        else:
+            st.error(f"Trailer alınırken hata: {response.status_code} - {response.text}")
+            return ""
+    except Exception as e:
+        st.error(f"Trailer alınırken hata: {e}")
+        return ""
+    
+def get_image(movie_title):
+    try:
+        response = requests.get(f"https://agentic-movie-recommendation-system-api-2.onrender.com/get_image/{movie_title}")
+        if response.status_code == 200:
+            data = response.json()
+            return data.get("image_url", "")
+        else:
+            st.error(f"Image alınırken hata: {response.status_code} - {response.text}")
+            return ""
+    except Exception as e:
+        st.error(f"Image alınırken hata: {e}")
+        return ""
 
 
 
@@ -76,22 +103,34 @@ for message in st.session_state["messages"]:
     with st.chat_message(message["role"]):
         st.write(message["content"])
         
-def save_session_state(mode,recommendations=None, emotion_response=None):
-    if mode=="emotion":
+def save_session_state(mode, recommendations=None, emotion_response=None):
+    if mode == "emotion":
         st.session_state.messages.append({"role": "assistant", "content": emotion_response})
-    elif mode=="category":
+    elif mode == "category":
+        contents = []
         for rec in recommendations:
-            st.session_state.messages.append({
-                "role": "assistant",
-                "content": f"**Title:** {rec.get('Title', 'N/A')}\n"
-                           f"**Director:** {rec.get('Director', 'N/A')}\n"
-                           f"**Star Cast:** {', '.join(rec.get('Star Cast', []))}\n"
-                           f"**Genre:** {rec.get('Genre', 'N/A')}\n"
-                           f"**Overview:** {rec.get('Overview', 'N/A')}\n"
-                           f"**Reason:** {rec.get('Reason', 'N/A')}\n"
-            })
-            if rec.get("Image URL"):
-                st.session_state.messages[-1]["content"] += f"\n![Image]({rec['Image URL']})"
+            content = (
+                f"**Title:** {rec.get('Title', 'N/A')}\n"
+                f"**Director:** {rec.get('Director', 'N/A')}\n"
+                f"**Star Cast:** {', '.join(rec.get('Star Cast', []))}\n"
+                f"**Genre:** {rec.get('Genre', 'N/A')}\n"
+                f"**Overview:** {rec.get('Overview', 'N/A')}\n"
+                f"**Reason:** {rec.get('Reason', 'N/A')}\n"
+                f"**Trailer:** [Watch Trailer]({get_trailer(rec.get('Title', ''))})\n"
+                f"![Image]({get_image(rec.get('Title', ''))})\n"
+            )
+            contents.append(content)
+
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": "\n\n".join(contents)
+        })
+
+
+
+
+
+
                 
 st.sidebar.title("Sohbet Geçmişi")
 
@@ -188,7 +227,7 @@ if user_query:
     st.session_state.messages.append({"role": "user", "content": user_query})
     
     response = requests.get(
-            f"http://localhost:8000/process_query/{user_query}"
+            f"https://agentic-movie-recommendation-system-api-2.onrender.com/process_query/{user_query}"
            
         )
         
@@ -205,11 +244,13 @@ if user_query:
                         st.write(f"**Title:** {rec.get('Title', 'N/A')}")
                         st.write(f"**Director:** {rec.get('Director', 'N/A')}")
                         st.write(f"**Star Cast:** {', '.join(rec.get('Star Cast', []))}")
-                        st.write(f"**Genre:** {rec.get('Genre', 'N/A')}")
+                        st.write(f"**Genre:** {rec.get('Genre', [])}")
                         st.write(f"**Overview:** {rec.get('Overview', 'N/A')}")
                         st.write(f"**Reason:** {rec.get('Reason', 'N/A')}")
-                        if rec.get("Image URL"):
-                            st.image(rec["Image URL"],caption=rec.get("Title", "N/A"), use_column_width=True)
+                        img_url = get_image(rec.get("Title", ""))
+                        st.image(img_url,caption=rec.get("Title", "N/A"), use_column_width=True)
+                        st.write(f"**Trailer:** [Watch Trailer]({get_trailer(rec.get('Title', ''))})")
+                        st.write("---"*50)
         elif mode == "emotion":
             emotion_response = data.get("emotion_response", "")
             with st.chat_message("assistant"):
@@ -235,4 +276,5 @@ if user_query:
             st.session_state["chat_histories"][new_chat_id] = st.session_state["messages"]
             save_chat_to_firestore(username, new_chat_id, st.session_state["messages"])
     
+
     
