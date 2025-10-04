@@ -3,6 +3,7 @@
   "project_id": "movie-rag",
   "private_key_id": "Your private key id",
   "private_key":"Your private key here",
+  "client_email": "firebase-adminsdk-fbsvc@movie-rag.iam.gserviceaccount.com",
   "client_id": "103174684338361943404",
   "auth_uri": "https://accounts.google.com/o/oauth2/auth",
   "token_uri": "https://oauth2.googleapis.com/token",
